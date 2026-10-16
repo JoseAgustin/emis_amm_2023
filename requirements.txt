@@ -1,0 +1,4 @@
+# Dependencias del proyecto emis_amm_2023
+pandas>=1.5.0
+openpyxl>=3.0.0
+numpy>=1.21.0
