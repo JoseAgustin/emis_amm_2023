@@ -1,75 +1,190 @@
 # emis_amm_2023
 
-**Scripts Python para actualizar el inventario de emisiones del Área Metropolitana de Monterrey (AMM) 2023**
+## Sistema de Actualización del Inventario de Emisiones — Área Metropolitana de Monterrey 2023
 
-Distribución espacial en malla 3×3 km para el modelo de calidad del aire WRF-Chem.
+Scripts en Python para actualizar la distribución espacial de emisiones atmosféricas
+del inventario 2023 del Área Metropolitana de Monterrey (AMM), empleando datos
+georreferenciados en malla de 3×3 km para el modelo WRF-Chem.
 
-## Descripción
+**Institución:** Instituto de Ciencias de la Atmósfera y Cambio Climático (ICAyCC), UNAM  
+**Autor:** José Agustín García Reynoso  
+**Versión:** 1.1.0
 
-Este repositorio contiene scripts Python que leen emisiones desde archivos Excel georreferenciados y actualizan los archivos CSV del inventario de emisiones (A*_2023.csv para fuentes de área y M_*.csv para fuentes vehiculares).
+---
 
-### Características principales
+## Descripción General
 
-- **10 fuentes de emisión**: 9 de área + 1 vehicular (carreteras)
-- **89+ operaciones** de actualización
-- **25+ códigos SCC** (Source Classification Code)
-- **Conversión automática**: Mg/año → g/año (×1E+06)
-- **Protección Saltillo**: Preserva emisiones existentes en celdas con LONGITUD ≤ -100.67 cuando el Excel no tiene datos
-- **Descomposición NOx**: Relación NO/NO₂ = 9.46 para emisiones vehiculares
-- **Formato Fortran**: Mantiene coma final, notación científica y contador de SCCs
+El sistema lee archivos Excel con emisiones actualizadas por fuente y actualiza los
+archivos CSV del inventario que alimentan al modelo de calidad del aire WRF-Chem.
+Se procesan **10 fuentes de emisión** (9 de área + 1 vehicular) con **89 operaciones**
+de actualización y **25 códigos SCC** (Source Classification Code).
 
-## Estructura del repositorio
+### Tipos de archivos CSV
+
+| Tipo | Prefijo | Formato | Ejemplo |
+|------|---------|---------|---------|
+| Área | `A*_2023.csv` | `grid,CID,Furb,Frural,SCCs` | `AVOC_2023.csv` |
+| Vehicular | `M_*.csv` | `GRIDCODE, emissions in gram per year` | `M_VOC.csv` |
+
+### Convención de nombres CSV (compatibilidad Fortran)
+
+Los nombres de archivos CSV mantienen longitud fija para compatibilidad con el código Fortran:
+
+| Contaminante | Archivo Área | Archivo Vehicular |
+|---|---|---|
+| COV | `AVOC_2023.csv` | `M_VOC.csv` |
+| CO | `ACO__2023.csv` | `M_CO.csv` |
+| NOx | `ANOx_2023.csv` | — |
+| NO | — | `M_NO.csv` |
+| NO₂ | — | `M_NO2.csv` |
+| SO₂ | `ASO2_2023.csv` | `M_SO2.csv` |
+| PM10 | `APM10_2023.csv` | `M_PM10.csv` |
+| PM2.5 | `APM25_2023.csv` | `M_PM25.csv` |
+| NH₃ | `ANH3_2023.csv` | `M_NH3.csv` |
+| CN | — | `M_CN.csv` |
+| CO₂ | `ACO2_2023.csv` | — |
+| CH₄ | `ACH4_2023.csv` | — |
+
+> **Nota:** `ACO__2023.csv` usa doble guion bajo para mantener la misma longitud que los demás archivos.
+
+---
+
+## Estructura del Repositorio
 
 ```
 emis_amm_2023/
-├── scripts/
-│   ├── proteccion_saltillo.py          # Módulo compartido de protección Saltillo
-│   ├── actualizar_emisiones_area.py    # Script maestro: 9 fuentes de área
-│   └── actualizar_emisiones_carreteras.py  # Script vehicular: carreteras
-├── datos/                              # Archivos de entrada (no versionados)
-│   ├── *.xlsx                          # Archivos Excel con emisiones actualizadas
-│   ├── A*_2023.csv                     # CSVs de fuentes de área
-│   ├── M_*.csv                         # CSVs de fuentes vehiculares
-│   └── localiza.csv                    # Coordenadas de la malla
-├── salida/                             # Archivos actualizados (no versionados)
 ├── README.md
-├── requirements.txt
 ├── .gitignore
-└── LICENSE
+├── requirements.txt
+├── proteccion_saltillo.py
+├── actualizar_emisiones_area.py
+├── actualizar_emisiones_carreteras.py
+├── datos/
+│   ├── localiza.csv
+│   ├── FM_MaqCons_malla.xlsx
+│   ├── FA_Agro_UDS_malla3x3.xlsx
+│   ├── FA_evaporativas_9cat_malla.xlsx
+│   ├── FA_AguasRes_malla.xlsx
+│   ├── FA_erosivas_malla.xlsx
+│   ├── FM_Aero_CAutobus_malla.xlsx
+│   ├── FM_ferrocarril_emis_malla.xlsx
+│   ├── FM_maquinaria_agricola_malla.xlsx
+│   ├── FA_comb_comer_regulada_malla.xlsx
+│   └── FM_carreteras_emis_malla.xlsx
+├── csv_originales/
+│   ├── AVOC_2023.csv ... ACH4_2023.csv
+│   └── M_VOC.csv ... M_CN.csv
+└── csv_actualizados/
 ```
 
-## Fuentes de emisión
+---
 
-### Fuentes de área (A*_2023.csv)
+## Fuentes de Emisión
 
-| # | Fuente | Excel | SCCs |
-|---|--------|-------|------|
-| 1 | Maquinaria de construcción | FM_MaqCons_malla.xlsx | 2311010000 |
-| 2 | Agrícola (7 subcategorías) | FA_Agro_UDS_malla3x3.xlsx | 2801500000, 2801600000, 2805001000-2805008000, 2460100000, 2501060000, 2302002000 |
-| 3 | Evaporativas (9 categorías) | FA_evaporativas_9cat_malla.xlsx | 2401001000, 2420000000, 2630020000, 2420008000, 2660000000, 2425000000, 2461020000, 2401090000, 2302050000 |
-| 4 | Aguas residuales | FA_AguasRes_RelleSant_malla.xlsx | 2630030000 |
-| 5 | Erosivas | FA_Erosivas_PM_UDS_malla.xlsx | 2730100000 |
-| 6 | Aeropuerto y autobuses | FM_Aero_CAutobus_malla.xlsx | 2275050011 |
-| 7 | Ferrocarril | FM_ferrocarril_emis_malla.xlsx | 2285000000 |
-| 8 | Maquinaria agrícola | FM_maquinaria_agricola_malla.xlsx | 2265005000 |
-| 9 | Combustión comercial | FA_comb_comer_regulada_malla.xlsx | 2103007000, 2104006000 |
+### Fuentes de Área (9 fuentes → A*_2023.csv)
 
-### Fuente vehicular (M_*.csv)
+| # | Fuente | Excel | Ops | SCCs |
+|---|--------|-------|-----|------|
+| 1 | Maquinaria de construcción | FM_MaqCons_malla.xlsx | 6 | 2270002000 |
+| 2 | Agricultura y ganadería | FA_Agro_UDS_malla3x3.xlsx | 23 | 8 SCCs |
+| 3 | Evaporativas (9 cat.) | FA_evaporativas_9cat_malla.xlsx | 9 | 9 SCCs |
+| 4 | Aguas residuales | FA_AguasRes_malla.xlsx | 2 | 2810001000 |
+| 5 | Erosión de suelos | FA_erosivas_malla.xlsx | 2 | 2810060000 |
+| 6 | Aeropuerto y C. Autobuses | FM_Aero_CAutobus_malla.xlsx | 6 | 2275020000 |
+| 7 | Ferrocarril | FM_ferrocarril_emis_malla.xlsx | 6 | 2270006000 |
+| 8 | Maquinaria agrícola | FM_maquinaria_agricola_malla.xlsx | 6 | 2270005000 |
+| 9 | Combustión comercial | FA_comb_comer_regulada_malla.xlsx | 14 | 2103007000, 2104011000 |
 
-| # | Fuente | Excel | SCCs |
-|---|--------|-------|------|
-| 10 | Carreteras (16 tipos de vehículo) | FM_carreteras_emis_malla.xlsx | 12 SCCs (2201-2230) |
+#### Detalle Fuente 2: Agricultura y ganadería (7 subcategorías)
 
-## Protección Saltillo
+| Subcategoría | Columnas Excel | SCC | Contaminantes |
+|---|---|---|---|
+| F1.1 Combustión agrícola | SUM_F1_1_*_AW | 2270005000 | PM10, PM2.5, SO2, CO, NOx, COV, NH3 |
+| F3.1 Distribución GLP | SUM_F3_1_COV_AW | 3333333333 | COV |
+| F5.1 Fertilizantes | SUM_F5_1_NH3_AW | 2801700000 | NH3 |
+| F5.2 Plaguicidas | SUM_F5_2_COV_AW | 2461850000 | COV |
+| F5.3 Ganadería | SUM_F5_3_*_AW | 2805020000 | NH3, CH4 |
+| F5.4 Corrales de engorda | SUM_F5_4_*_AW | 2805000000 | PM10, PM2.5 |
+| F5.5 Labranza | SUM_F5_5_*_AW | 2801000002 | PM10, PM2.5 |
+| F5.6 Quemas agrícolas | SUM_F5_6_*_AW | 2801500100 | PM10, PM2.5, SO2, CO, NOx, COV, NH3 |
 
-La malla de 2,500 celdas (50×50) cubre tanto Monterrey como Saltillo:
+### Fuente Vehicular (1 fuente → M_*.csv)
 
-- **Monterrey** (~1,750 celdas, LONG > -100.67): Siempre se actualizan desde Excel
-- **Saltillo** (~750 celdas, LONG ≤ -100.67): Solo se actualizan si el Excel tiene datos válidos (>0); de lo contrario, se preservan los valores originales del CSV
+| # | Fuente | Excel | Contaminantes | SCCs |
+|---|--------|-------|---------------|------|
+| 10 | Carreteras | FM_carreteras_emis_malla.xlsx | 8 (+NO/NO2) | 16 |
 
-Esta protección aplica tanto para fuentes de área como vehiculares.
+#### 16 SCCs vehiculares
 
-## Uso
+| Tipo | SCCs |
+|---|---|
+| Escape (330) | 2201001330, 2201020330, 2201040330, 2201070330, 2201080330, 2230001330, 2230060330, 2230071330, 2230073330, 2230074330, 2230075330 |
+| Evaporativos (33V) | 220100133V, 220102033V, 220104033V, 220107033V, 220108033V |
+
+> **Nota:** Los SCCs evaporativos (33V) solo tienen proporción > 0 para COV.
+
+#### Descomposición NOx → NO + NO₂
+
+```
+Relación NO/NO₂ = 9.46
+Fracción NO  = 9.46 / (1 + 9.46) = 0.90440
+Fracción NO₂ = 1.00 / (1 + 9.46) = 0.09560
+```
+
+---
+
+## Protección de Saltillo
+
+Los archivos Excel contienen datos actualizados **solo para Monterrey**. Las celdas de
+Saltillo (LONGITUD ≤ -100.67°) se protegen para preservar sus emisiones originales.
+
+Esta protección aplica tanto a **fuentes de área** (A*_2023.csv) como a **fuentes vehiculares** (M_*.csv).
+
+| Zona | Celdas | Criterio | Comportamiento |
+|------|--------|----------|----------------|
+| Monterrey | ~1,750 | LONG > -100.67 | Siempre actualizar |
+| Saltillo | ~750 | LONG ≤ -100.67 | Preservar si Excel no tiene dato |
+
+---
+
+## Conversión de Unidades
+
+```
+Excel: Mg/año (megagramos)  →  CSV: g/año (gramos)
+Factor: 1 Mg = 1,000,000 g = 1×10⁶ g
+```
+
+---
+
+## Formato de Archivos CSV
+
+### Archivos de Área (A*_2023.csv)
+
+```
+R1: grid,CID,Furb,Frural,SCCs,,,,
+R2: N,g_per_year,SCC_1,SCC_2,...,SCC_N,
+R3+: grid, CID, Furb, Frural, emis_1, ..., emis_N,
+```
+
+- 4 columnas fijas + N emisiones
+- Coma final en cada línea (Fortran)
+- Notación científica: X.XXXXXE+XX
+- R2: contador de SCCs se actualiza automáticamente
+
+### Archivos Vehiculares (M_*.csv)
+
+```
+R1: GRIDCODE, emissions in gram per year
+R2:      16, SCC_1, SCC_2, ..., SCC_16
+R3+: GRIDCODE, emis_1, ..., emis_16, 6
+```
+
+- 1 columna fija (GRIDCODE) + N emisiones + campo final (6 = huso UTM)
+- Notación científica: X.XXXXE+XX
+
+---
+
+## Instalación y Uso
 
 ### Requisitos
 
@@ -77,53 +192,43 @@ Esta protección aplica tanto para fuentes de área como vehiculares.
 pip install -r requirements.txt
 ```
 
-Python 3.8+ con pandas ≥ 1.5.0 y openpyxl ≥ 3.0.0
-
-### Actualizar fuentes de área
+### Ejecución
 
 ```bash
-# Todas las fuentes
-python scripts/actualizar_emisiones_area.py
+# Emisiones de área (9 fuentes)
+python actualizar_emisiones_area.py \
+    --dir-excel datos --dir-csv csv_originales \
+    --dir-output csv_actualizados --dir-localiza datos
 
-# Solo una fuente específica
-python scripts/actualizar_emisiones_area.py --fuente FM_MaqCons_malla
-
-# Modo simulación (sin escribir archivos)
-python scripts/actualizar_emisiones_area.py --dry-run
-
-# Directorios personalizados
-python scripts/actualizar_emisiones_area.py --dir-excel datos/ --dir-csv datos/ --dir-salida salida/
+# Emisiones vehiculares (carreteras)
+python actualizar_emisiones_carreteras.py \
+    --dir-excel datos --dir-csv csv_originales \
+    --dir-output csv_actualizados --dir-localiza datos
 ```
 
-### Actualizar fuentes vehiculares
+### Opciones
 
-```bash
-# Carreteras
-python scripts/actualizar_emisiones_carreteras.py
+| Opción | Descripción | Default |
+|--------|-------------|---------|
+| `--dir-excel` | Directorio con archivos Excel | `datos` |
+| `--dir-csv` | Directorio con CSVs originales | `csv_originales` |
+| `--dir-output` | Directorio de salida | `csv_actualizados` |
+| `--dir-localiza` | Directorio con localiza.csv | `datos` |
+| `--fuente` | Solo esta fuente (área) | Todas |
+| `--csv` | Solo este CSV (área) | Todos |
+| `--dry-run` | Simular sin escribir | No |
 
-# Modo simulación
-python scripts/actualizar_emisiones_carreteras.py --dry-run
-```
+---
 
-## Formato de archivos CSV
+## Malla de Cálculo
 
-Los archivos CSV mantienen compatibilidad con el código Fortran del repositorio `emis_2023`:
+- **Resolución**: 3 × 3 km
+- **Celdas totales**: 2,500 (50 × 50)
+- **Cobertura**: Monterrey (~1,750) + Saltillo (~750)
+- **Coordenadas**: localiza.csv (GRIDCODE, LONG, LAT)
 
-- **Línea 1**: Encabezado con nombres de columnas + coma final
-- **Línea 2**: Contador de SCCs (se actualiza automáticamente) + coma final
-- **Líneas 3+**: Datos en notación científica (X.XXXXXXE+XX) + coma final
-
-## Relación con otros repositorios
-
-| Repositorio | Contenido | Lenguaje |
-|---|---|---|
-| **emis_2023** | Distribución espacial original (genera los CSV) | Fortran |
-| **emis_amm_2023** | Actualización de la distribución (modifica los CSV) | Python |
-
-## Autores
-
-- José Agustín García Reynoso — ICAyCC, UNAM
+---
 
 ## Licencia
 
-MIT License
+MIT License — ICAyCC, UNAM
