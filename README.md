@@ -41,9 +41,9 @@ Los nombres de archivos CSV mantienen longitud fija para compatibilidad con el c
 | PM10 | `APM10_2023.csv` | `M_PM10.csv` |
 | PM2.5 | `APM25_2023.csv` | `M_PM25.csv` |
 | NH₃ | `ANH3_2023.csv` | `M_NH3.csv` |
-| CN | — | `M_CN.csv` |
-| CO₂ | `ACO2_2023.csv` | — |
-| CH₄ | `ACH4_2023.csv` | — |
+| CN | `ACN__2023.csv`  | `M_CN.csv` |
+| CO₂ | `ACO2_2023.csv` | `M_CO2.csv`  |
+| CH₄ | `ACH4_2023.csv` | `M_CH4.csv` |
 
 > **Nota:** `ACO__2023.csv` usa doble guion bajo para mantener la misma longitud que los demás archivos.
 
