@@ -2,333 +2,404 @@
 # -*- coding: utf-8 -*-
 """
 actualizar_emisiones_area.py
-Script maestro para actualizar emisiones de fuentes de área.
+============================
+Script para actualizar emisiones de AREA en el inventario AMM 2023.
+Lee 9 archivos Excel y actualiza los archivos A*_2023.csv.
 
-9 fuentes | 78 operaciones | 21 SCCs → 10 archivos A*_2023.csv
-Conversión: Mg/año → g/año (×1E+06)
-Protección Saltillo: LONGITUD <= -100.67
+Fuentes: Maquinaria construccion, Agricultura (7 sub), Evaporativas (9 cat),
+         Aguas residuales, Erosion, Aeropuerto, Ferrocarril, Maq. agricola,
+         Combustion comercial.
 
-Uso:
-  python actualizar_emisiones_area.py [opciones]
-
-Opciones:
-  --dry-run              Simular sin escribir archivos
-  --fuente NOMBRE        Procesar solo una fuente específica
-  --csv NOMBRE           Procesar solo un CSV específico
-  --dir-excel RUTA       Directorio de archivos Excel (default: datos/)
-  --dir-csv RUTA         Directorio de archivos CSV (default: datos/)
-  --dir-salida RUTA      Directorio de salida (default: salida/)
+Repositorio: emis_amm_2023
+Autor: Jose Agustin Garcia Reynoso - ICAyCC, UNAM
 """
 
+import pandas as pd
+import numpy as np
 import os
 import sys
 import argparse
-import pandas as pd
-import numpy as np
-from proteccion_saltillo import cargar_coordenadas, proteger_saltillo, LON_LIMITE
+import shutil
+from datetime import datetime
+
+from proteccion_saltillo import cargar_localiza, proteger_saltillo
+
+FACTOR_CONVERSION = 1e6  # Mg/year -> g/year
 
 # ============================================================
-# CONFIGURACIÓN: 9 fuentes de área
+# DICCIONARIO DE FUENTES Y OPERACIONES
 # ============================================================
 FUENTES = {
     "FM_MaqCons_malla": {
-        "descripcion": "Maquinaria de construcción",
         "excel": "FM_MaqCons_malla.xlsx",
         "hoja": "FM_MaqCons_malla",
-        "grid_excel": "GRIDCODE",
         "operaciones": [
-            {"csv": "AVOC_2023.csv", "col_excel": "COV",  "scc": "2311010000"},
-            {"csv": "ACO_2023.csv",  "col_excel": "CO",   "scc": "2311010000"},
-            {"csv": "ANOx_2023.csv", "col_excel": "NOx",  "scc": "2311010000"},
-            {"csv": "ASO2_2023.csv", "col_excel": "SO2",  "scc": "2311010000"},
-            {"csv": "APM10_2023.csv","col_excel": "PM10", "scc": "2311010000"},
-            {"csv": "APM25_2023.csv","col_excel": "PM2_5","scc": "2311010000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3",  "scc": "2311010000"},
-            {"csv": "ACO2_2023.csv", "col_excel": "CO2",  "scc": "2311010000"},
+            {"col": "SUM_PM10_AW", "scc": "2311010000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_PM25_AW", "scc": "2311010000", "csv": "APM25_2023.csv"},
+            {"col": "SUM_SO2_AW", "scc": "2311010000", "csv": "ASO2_2023.csv"},
+            {"col": "SUM_CO_AW",  "scc": "2311010000", "csv": "ACO__2023.csv"},
+            {"col": "SUM_NOX_AW", "scc": "2311010000", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_COV_AW", "scc": "2311010000", "csv": "AVOC_2023.csv"},
         ]
     },
     "FA_Agro_UDS_malla3x3": {
-        "descripcion": "Agrícola (7 subcategorías)",
         "excel": "FA_Agro_UDS_malla3x3.xlsx",
         "hoja": "FA_Agro_UDS_malla3x3",
-        "grid_excel": "GRIDCODE",
         "operaciones": [
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_Quema",  "scc": "2801500000"},
-            {"csv": "ACO_2023.csv",  "col_excel": "CO_Quema",   "scc": "2801500000"},
-            {"csv": "ANOx_2023.csv", "col_excel": "NOx_Quema",  "scc": "2801500000"},
-            {"csv": "APM10_2023.csv","col_excel": "PM10_Quema", "scc": "2801500000"},
-            {"csv": "APM25_2023.csv","col_excel": "PM25_Quema", "scc": "2801500000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3_Quema",  "scc": "2801500000"},
-            {"csv": "ACO2_2023.csv", "col_excel": "CO2_Quema",  "scc": "2801500000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3_Fert",   "scc": "2801600000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3_Bov",    "scc": "2805001000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_Bov",    "scc": "2805001000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3_Porc",   "scc": "2805002000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_Porc",   "scc": "2805002000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3_Capr",   "scc": "2805003000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_Capr",   "scc": "2805003000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3_Aves",   "scc": "2805007000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_Aves",   "scc": "2805007000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3_Equi",   "scc": "2805008000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_Equi",   "scc": "2805008000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_Solv",   "scc": "2460100000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_GasLP",  "scc": "2501060000"},
-            {"csv": "APM10_2023.csv","col_excel": "PM10_Ladr",  "scc": "2302002000"},
-            {"csv": "APM25_2023.csv","col_excel": "PM25_Ladr",  "scc": "2302002000"},
-            {"csv": "ACO_2023.csv",  "col_excel": "CO_Ladr",    "scc": "2302002000"},
+            # F1.1 Combustion agricola -> SCC 2270005000
+            {"col": "SUM_F1_1_PM10_AW", "scc": "2270005000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_F1_1_PM2_5_AW", "scc": "2270005000", "csv": "APM25_2023.csv"},
+            {"col": "SUM_F1_1_SO2_AW",  "scc": "2270005000", "csv": "ASO2_2023.csv"},
+            {"col": "SUM_F1_1_CO_AW",   "scc": "2270005000", "csv": "ACO__2023.csv"},
+            {"col": "SUM_F1_1_NOX_AW",  "scc": "2270005000", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_F1_1_COV_AW",  "scc": "2270005000", "csv": "AVOC_2023.csv"},
+            {"col": "SUM_F1_1_NH3_AW",  "scc": "2270005000", "csv": "ANH3_2023.csv"},
+            # F3.1 Distribucion GLP -> SCC 3333333333
+            {"col": "SUM_F3_1_COV_AW",  "scc": "3333333333", "csv": "AVOC_2023.csv"},
+            # F5.1 Fertilizantes -> SCC 2801700000
+            {"col": "SUM_F5_1_NH3_AW",  "scc": "2801700000", "csv": "ANH3_2023.csv"},
+            # F5.2 Plaguicidas -> SCC 2461850000
+            {"col": "SUM_F5_2_COV_AW",  "scc": "2461850000", "csv": "AVOC_2023.csv"},
+            # F5.3 Ganaderia -> SCC 2805020000
+            {"col": "SUM_F5_3_NH3_AW",  "scc": "2805020000", "csv": "ANH3_2023.csv"},
+            {"col": "SUM_F5_3_CH4_AW",  "scc": "2805020000", "csv": "ACH4_2023.csv"},
+            # F5.4 Corrales de engorda -> SCC 2805000000
+            {"col": "SUM_F5_4_PM10_AW", "scc": "2805000000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_F5_4_PM25_AW", "scc": "2805000000", "csv": "APM25_2023.csv"},
+            # F5.5 Labranza -> SCC 2801000002
+            {"col": "SUM_F5_5_PM10_AW", "scc": "2801000002", "csv": "APM10_2023.csv"},
+            {"col": "SUM_F5_5_PM25_AW", "scc": "2801000002", "csv": "APM25_2023.csv"},
+            # F5.6 Quemas agricolas -> SCC 2801500100
+            {"col": "SUM_F5_6_PM10_AW", "scc": "2801500100", "csv": "APM10_2023.csv"},
+            {"col": "SUM_F5_6_PM25_AW", "scc": "2801500100", "csv": "APM25_2023.csv"},
+            {"col": "SUM_F5_6_SO2_AW",  "scc": "2801500100", "csv": "ASO2_2023.csv"},
+            {"col": "SUM_F5_6_CO_AW",   "scc": "2801500100", "csv": "ACO__2023.csv"},
+            {"col": "SUM_F5_6_NOX_AW",  "scc": "2801500100", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_F5_6_COV_AW",  "scc": "2801500100", "csv": "AVOC_2023.csv"},
+            {"col": "SUM_F5_6_NH3_AW",  "scc": "2801500100", "csv": "ANH3_2023.csv"},
         ]
     },
     "FA_evaporativas_9cat_malla": {
-        "descripcion": "Evaporativas (9 categorías)",
         "excel": "FA_evaporativas_9cat_malla.xlsx",
         "hoja": "FA_evaporativas_9cat_malla",
-        "grid_excel": "GRIDCODE",
         "operaciones": [
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_Pint",    "scc": "2401001000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_LimpSup", "scc": "2420000000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_ArtLimp", "scc": "2630020000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_LavSeco", "scc": "2420008000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_ArtPers", "scc": "2660000000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_ImpArGr", "scc": "2425000000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_PavAsf",  "scc": "2461020000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_RecubSup","scc": "2401090000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_Panad",   "scc": "2302050000"},
+            {"col": "F21ArtGraf",       "scc": "2425000000", "csv": "AVOC_2023.csv"},
+            {"col": "F23LavSeco",       "scc": "2420000055", "csv": "AVOC_2023.csv"},
+            {"col": "F24LimSupInd",     "scc": "2415000000", "csv": "AVOC_2023.csv"},
+            {"col": "F25PintAuto",      "scc": "2401005000", "csv": "AVOC_2023.csv"},
+            {"col": "F28RecSupInd",     "scc": "2401002000", "csv": "AVOC_2023.csv"},
+            {"col": "F31GLPCom",        "scc": "3333333333", "csv": "AVOC_2023.csv"},
+            {"col": "F31GLPCom",        "scc": "2390007000", "csv": "AVOC_2023.csv"},
+            {"col": "F32ManDisGasolina","scc": "2501060000", "csv": "AVOC_2023.csv"},
+            {"col": "F43Panifica",      "scc": "2302050000", "csv": "AVOC_2023.csv"},
         ]
     },
-    "FA_AguasRes_RelleSant_malla": {
-        "descripcion": "Aguas residuales y rellenos sanitarios",
+    "FA_AguasRes_malla": {
         "excel": "FA_AguasRes_RelleSant_malla.xlsx",
         "hoja": "FA_AguasRes_RelleSant_malla",
-        "grid_excel": "GRIDCODE",
         "operaciones": [
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_AguRes", "scc": "2630030000"},
-            {"csv": "ACH4_2023.csv", "col_excel": "CH4_RelSan", "scc": "2630030000"},
+            {"col": "COV", "scc": "2630030000", "csv": "AVOC_2023.csv"},
+            {"col": "CH4", "scc": "2630030000", "csv": "ACH4_2023.csv"},
         ]
     },
-    "FA_Erosivas_PM_UDS_malla": {
-        "descripcion": "Erosivas (PM10 y PM2.5)",
+    "FA_erosivas_malla": {
         "excel": "FA_Erosivas_PM_UDS_malla.xlsx",
         "hoja": "FA_Erosivas_PM_UDS_malla",
-        "grid_excel": "GRIDCODE",
         "operaciones": [
-            {"csv": "APM10_2023.csv","col_excel": "PM10_Eros", "scc": "2730100000"},
-            {"csv": "APM25_2023.csv","col_excel": "PM25_Eros", "scc": "2730100000"},
+            {"col": "SUM_PM10_AW", "scc": "2730100000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_PM25_AW", "scc": "2730100000", "csv": "APM25_2023.csv"},
         ]
     },
     "FM_Aero_CAutobus_malla": {
-        "descripcion": "Aeropuerto y centrales de autobuses",
         "excel": "FM_Aero_CAutobus_malla.xlsx",
         "hoja": "FM_Aero_CAutobus_malla",
-        "grid_excel": "GRIDCODE",
         "operaciones": [
-            {"csv": "AVOC_2023.csv", "col_excel": "COV",  "scc": "2275050011"},
-            {"csv": "ACO_2023.csv",  "col_excel": "CO",   "scc": "2275050011"},
-            {"csv": "ANOx_2023.csv", "col_excel": "NOx",  "scc": "2275050011"},
-            {"csv": "ASO2_2023.csv", "col_excel": "SO2",  "scc": "2275050011"},
-            {"csv": "APM10_2023.csv","col_excel": "PM10", "scc": "2275050011"},
-            {"csv": "APM25_2023.csv","col_excel": "PM25", "scc": "2275050011"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3",  "scc": "2275050011"},
-            {"csv": "ACO2_2023.csv", "col_excel": "CO2",  "scc": "2275050011"},
+            {"col": "SUM_PM10", "scc": "2270008000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_PM25", "scc": "2270008000", "csv": "APM25_2023.csv"},
+            {"col": "SUM_SO2",  "scc": "2270008000", "csv": "ASO2_2023.csv"},
+            {"col": "SUM_CO",   "scc": "2270008000", "csv": "ACO__2023.csv"},
+            {"col": "SUM_NOX",  "scc": "2270008000", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_COV",  "scc": "2270008000", "csv": "AVOC_2023.csv"},
         ]
     },
     "FM_ferrocarril_emis_malla": {
-        "descripcion": "Ferrocarril",
         "excel": "FM_ferrocarril_emis_malla.xlsx",
         "hoja": "FM_ferrocarril_emis_malla",
-        "grid_excel": "GRIDCODE",
         "operaciones": [
-            {"csv": "AVOC_2023.csv", "col_excel": "COV",  "scc": "2285000000"},
-            {"csv": "ACO_2023.csv",  "col_excel": "CO",   "scc": "2285000000"},
-            {"csv": "ANOx_2023.csv", "col_excel": "NOx",  "scc": "2285000000"},
-            {"csv": "ASO2_2023.csv", "col_excel": "SO2",  "scc": "2285000000"},
-            {"csv": "APM10_2023.csv","col_excel": "PM10", "scc": "2285000000"},
-            {"csv": "APM25_2023.csv","col_excel": "PM25", "scc": "2285000000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3",  "scc": "2285000000"},
-            {"csv": "ACO2_2023.csv", "col_excel": "CO2",  "scc": "2285000000"},
+            {"col": "SUM_PM10_LW", "scc": "2285000000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_PM25_LW", "scc": "2285000000", "csv": "APM25_2023.csv"},
+            {"col": "SUM_SO2_LW",  "scc": "2285000000", "csv": "ASO2_2023.csv"},
+            {"col": "SUM_CO_LW",   "scc": "2285000000", "csv": "ACO__2023.csv"},
+            {"col": "SUM_NOX_LW",  "scc": "2285000000", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_COV_LW",  "scc": "2285000000", "csv": "AVOC_2023.csv"},
         ]
     },
     "FM_maquinaria_agricola_malla": {
-        "descripcion": "Maquinaria agrícola",
         "excel": "FM_maquinaria_agricola_malla.xlsx",
         "hoja": "FM_maquinaria_agricola_malla",
-        "grid_excel": "GRIDCODE",
         "operaciones": [
-            {"csv": "AVOC_2023.csv", "col_excel": "COV",  "scc": "2265005000"},
-            {"csv": "ACO_2023.csv",  "col_excel": "CO",   "scc": "2265005000"},
-            {"csv": "ANOx_2023.csv", "col_excel": "NOx",  "scc": "2265005000"},
-            {"csv": "ASO2_2023.csv", "col_excel": "SO2",  "scc": "2265005000"},
-            {"csv": "APM10_2023.csv","col_excel": "PM10", "scc": "2265005000"},
-            {"csv": "APM25_2023.csv","col_excel": "PM25", "scc": "2265005000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3",  "scc": "2265005000"},
-            {"csv": "ACO2_2023.csv", "col_excel": "CO2",  "scc": "2265005000"},
+            {"col": "SUM_PM10", "scc": "2265005000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_PM2_5","scc": "2265005000", "csv": "APM25_2023.csv"},
+            {"col": "SUM_SO2",  "scc": "2265005000", "csv": "ASO2_2023.csv"},
+            {"col": "SUM_CO",   "scc": "2265005000", "csv": "ACO__2023.csv"},
+            {"col": "SUM_NOX",  "scc": "2265005000", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_COV",  "scc": "2265005000", "csv": "AVOC_2023.csv"},
+            {"col": "SUM_NH3",  "scc": "2265005000", "csv": "ANH3_2023.csv"},
+            {"col": "SUM_CN",   "scc": "2265005000", "csv": "ACN__2023.csv"},
         ]
     },
     "FA_comb_comer_regulada_malla": {
-        "descripcion": "Combustión comercial regulada",
         "excel": "FA_comb_comer_regulada_malla.xlsx",
         "hoja": "FA_comb_comer_regulada_malla",
-        "grid_excel": "GRIDCODE",
         "operaciones": [
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_Comb",  "scc": "2103007000"},
-            {"csv": "ACO_2023.csv",  "col_excel": "CO_Comb",   "scc": "2103007000"},
-            {"csv": "ANOx_2023.csv", "col_excel": "NOx_Comb",  "scc": "2103007000"},
-            {"csv": "ASO2_2023.csv", "col_excel": "SO2_Comb",  "scc": "2103007000"},
-            {"csv": "APM10_2023.csv","col_excel": "PM10_Comb", "scc": "2103007000"},
-            {"csv": "APM25_2023.csv","col_excel": "PM25_Comb", "scc": "2103007000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3_Comb",  "scc": "2103007000"},
-            {"csv": "ACO2_2023.csv", "col_excel": "CO2_Comb",  "scc": "2103007000"},
-            {"csv": "AVOC_2023.csv", "col_excel": "COV_Evap",  "scc": "2104006000"},
-            {"csv": "ANH3_2023.csv", "col_excel": "NH3_Evap",  "scc": "2104006000"},
+            # Combustion -> SCC 2103007000
+            {"col": "PM10",        "scc": "2103007000", "csv": "APM10_2023.csv"},
+            {"col": "PM2_5",       "scc": "2103007000", "csv": "APM25_2023.csv"},
+            {"col": "SO2",         "scc": "2103007000", "csv": "ASO2_2023.csv"},
+            {"col": "CO",          "scc": "2103007000", "csv": "ACO__2023.csv"},
+            {"col": "NOx",         "scc": "2103007000", "csv": "ANOx_2023.csv"},
+            {"col": "COTComb",     "scc": "2103007000", "csv": "AVOC_2023.csv"},
+            {"col": "NH3",         "scc": "2103007000", "csv": "ANH3_2023.csv"},
+            {"col": "CN",          "scc": "2103007000", "csv": "ACN__2023.csv"},
+            # Evaporacion -> SCC 2104011000
+            {"col": "COVProc",   "scc": "2103004000", "csv": "AVOC_2023.csv"},
         ]
     },
 }
 
-FACTOR_CONVERSION = 1e6
 
-def leer_csv_fortran(filepath):
-    """Lee un CSV con formato Fortran (coma final, notación científica)."""
-    with open(filepath, 'r') as f:
+# ============================================================
+# FUNCIONES DE LECTURA/ESCRITURA CSV AREA
+# ============================================================
+def leer_csv_area(ruta):
+    """Lee un archivo A*_2023.csv con formato Fortran de area."""
+    with open(ruta, 'r') as f:
         lines = f.readlines()
-    header = lines[0].strip().rstrip(',').split(',')
-    scc_count_line = lines[1].strip().rstrip(',')
-    data_lines = lines[2:]
-    return header, scc_count_line, data_lines, lines
 
-def escribir_csv_fortran(filepath, header, scc_count, data_df, original_lines):
-    """Escribe CSV manteniendo formato Fortran."""
-    with open(filepath, 'w') as f:
-        f.write(','.join(header) + ',\n')
-        f.write(f"{scc_count},\n")
-        for idx, row in data_df.iterrows():
-            values = []
-            for i, col in enumerate(data_df.columns):
-                val = row[col]
-                if i < 4:
-                    values.append(str(int(val)) if isinstance(val, (int, float)) and col != header[0] else str(val))
-                else:
-                    values.append(f"{val:.6E}")
-            f.write(','.join(values) + ',\n')
+    r2 = lines[1].strip().rstrip(',').split(',')
+    r2_clean = [s.strip() for s in r2 if s.strip()]
+    scc_count = int(r2_clean[0])
+    scc_names = r2_clean[2:]  # saltar N y g_per_year
 
-def actualizar_contador_scc(filepath, nuevo_conteo):
-    """Actualiza el contador de SCCs en la línea 2 del CSV."""
-    with open(filepath, 'r') as f:
-        lines = f.readlines()
-    lines[1] = f"{nuevo_conteo},\n"
-    with open(filepath, 'w') as f:
-        f.writelines(lines)
-
-def procesar_fuente(nombre_fuente, config, dir_excel, dir_csv, dir_salida, coords, dry_run=False):
-    """Procesa una fuente de área completa."""
-    print(f"\n{'='*60}")
-    print(f"Fuente: {nombre_fuente} — {config['descripcion']}")
-    print(f"{'='*60}")
-    
-    excel_path = os.path.join(dir_excel, config["excel"])
-    if not os.path.exists(excel_path):
-        print(f"  ⚠️  {config['excel']}: No encontrado. Saltando.")
-        return 0
-    
-    df_excel = pd.read_excel(excel_path, sheet_name=config["hoja"])
-    print(f"  📊 Excel: {len(df_excel)} filas")
-    
-    total_ops = 0
-    csv_ops = {}
-    for op in config["operaciones"]:
-        csv_name = op["csv"]
-        if csv_name not in csv_ops:
-            csv_ops[csv_name] = []
-        csv_ops[csv_name].append(op)
-    
-    for csv_name, ops in csv_ops.items():
-        csv_path = os.path.join(dir_csv, csv_name)
-        if not os.path.exists(csv_path):
-            print(f"  ⚠️  {csv_name}: No encontrado. Saltando.")
+    data_rows = []
+    for line in lines[2:]:
+        stripped = line.strip().rstrip(',')
+        if not stripped:
             continue
-        
-        df_csv = pd.read_csv(csv_path, skiprows=[1])
-        
-        for op in ops:
-            col_excel = op["col_excel"]
-            scc = op["scc"]
-            
-            if col_excel not in df_excel.columns:
-                print(f"  ⚠️  Columna '{col_excel}' no encontrada en Excel. Saltando.")
-                continue
-            
-            scc_col = str(scc)
-            if scc_col not in df_csv.columns:
-                print(f"  ➕ SCC {scc} no existe en {csv_name}. Agregando columna.")
-                df_csv[scc_col] = 0.0
-            
-            df_excel_conv = df_excel.copy()
-            df_excel_conv[col_excel] = df_excel_conv[col_excel] * FACTOR_CONVERSION
-            
-            df_csv, n_act = proteger_saltillo(
-                df_csv, df_excel_conv, scc_col, col_excel,
-                "grid", config["grid_excel"], coords
-            )
-            
-            print(f"  ✅ {csv_name} | SCC {scc} | {col_excel}: {n_act} celdas actualizadas")
-            total_ops += 1
-        
-        if not dry_run:
-            salida_path = os.path.join(dir_salida, csv_name)
-            df_csv.to_csv(salida_path, index=False, float_format="%.6E")
-            n_sccs = len([c for c in df_csv.columns if c.isdigit() and len(c) == 10])
-            actualizar_contador_scc(salida_path, n_sccs)
-            print(f"  💾 Guardado: {salida_path} ({n_sccs} SCCs)")
-    
-    return total_ops
+        parts = [p.strip() for p in stripped.split(',') if p.strip()]
+        if len(parts) < 4:
+            continue
+        grid = int(parts[0])
+        cid = int(parts[1])
+        furb = float(parts[2])
+        frural = float(parts[3])
+        emisiones = [float(p) for p in parts[4:]]
+        data_rows.append([grid, cid, furb, frural] + emisiones)
 
+    col_names = ['grid', 'CID', 'Furb', 'Frural'] + scc_names
+    df = pd.DataFrame(data_rows, columns=col_names[:len(data_rows[0])])
+
+    for scc in scc_names:
+        if scc not in df.columns:
+            df[scc] = 0.0
+
+    df['grid'] = df['grid'].astype(int)
+    df['CID'] = df['CID'].astype(int)
+    return df, scc_names, scc_count, lines
+
+
+def escribir_csv_area(ruta, df, lines_orig):
+    """Escribe CSV de area con formato Fortran compatible."""
+    all_sccs = [c for c in df.columns if c not in ('grid', 'CID', 'Furb', 'Frural')]
+    nuevo_count = len(all_sccs)
+
+    with open(ruta, 'w') as f:
+        f.write(lines_orig[0])
+        scc_list = ",".join(all_sccs)
+        f.write(f"{nuevo_count},g_per_year,{scc_list},\n")
+        for _, row in df.iterrows():
+            grid = int(row['grid'])
+            cid = int(row['CID'])
+            furb = row['Furb']
+            frural = row['Frural']
+            parts = [f"{grid}", f"{cid:>6d}", f" {furb:.4f}", f" {frural:.4f}"]
+            for scc in all_sccs:
+                val = row[scc]
+                parts.append(f" {val:.5E}")
+            f.write(",".join(parts) + ",\n")
+    return nuevo_count
+
+
+# ============================================================
+# FUNCION PRINCIPAL
+# ============================================================
 def main():
     parser = argparse.ArgumentParser(
-        description="Actualizar emisiones de fuentes de área en archivos A*_2023.csv"
+        description='Actualizar emisiones de area del inventario AMM 2023'
     )
-    parser.add_argument("--dry-run", action="store_true", help="Simular sin escribir")
-    parser.add_argument("--fuente", type=str, help="Procesar solo una fuente")
-    parser.add_argument("--csv", type=str, help="Procesar solo un CSV")
-    parser.add_argument("--dir-excel", default="datos/", help="Directorio de Excel")
-    parser.add_argument("--dir-csv", default="datos/", help="Directorio de CSV")
-    parser.add_argument("--dir-salida", default="salida/", help="Directorio de salida")
+    parser.add_argument('--dir-excel', default='datos/excel/',
+                        help='Directorio con archivos Excel (default: datos)')
+    parser.add_argument('--dir-csv', default='datos/csv/',
+                        help='Directorio con CSVs originales (default: csv_originales)')
+    parser.add_argument('--dir-output', default='csv_actualizados',
+                        help='Directorio de salida (default: csv_actualizados)')
+    parser.add_argument('--dir-localiza', default='datos/csv/',
+                        help='Directorio con localiza.csv (default: datos)')
+    parser.add_argument('--fuente', default=None,
+                        help='Procesar solo esta fuente (default: todas)')
+    parser.add_argument('--csv', default=None,
+                        help='Procesar solo este CSV (default: todos)')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Simular sin escribir archivos')
     args = parser.parse_args()
-    
-    print("=" * 60)
-    print("ACTUALIZACIÓN DE EMISIONES — FUENTES DE ÁREA")
-    print(f"9 fuentes | 78 operaciones | 21 SCCs")
-    print(f"Conversión: Mg/año → g/año (×{FACTOR_CONVERSION:.0E})")
-    print(f"Protección Saltillo: LON <= {LON_LIMITE}")
-    print("=" * 60)
-    
-    if args.dry_run:
-        print("🔍 MODO DRY-RUN: No se escribirán archivos")
-    
-    os.makedirs(args.dir_salida, exist_ok=True)
-    
-    print("\nCargando coordenadas...")
-    coords = cargar_coordenadas(os.path.join(args.dir_csv, "localiza.csv"))
-    
-    total_ops = 0
-    fuentes_a_procesar = FUENTES
-    
-    if args.fuente:
-        if args.fuente in FUENTES:
-            fuentes_a_procesar = {args.fuente: FUENTES[args.fuente]}
-        else:
-            print(f"❌ Fuente '{args.fuente}' no encontrada.")
-            print(f"   Disponibles: {', '.join(FUENTES.keys())}")
-            sys.exit(1)
-    
-    for nombre, config in fuentes_a_procesar.items():
-        ops = procesar_fuente(
-            nombre, config,
-            args.dir_excel, args.dir_csv, args.dir_salida,
-            coords, args.dry_run
-        )
-        total_ops += ops
-    
-    print(f"\n{'='*60}")
-    print(f"RESUMEN: {total_ops} operaciones completadas")
-    print(f"{'='*60}")
 
-if __name__ == "__main__":
+    print("=" * 70)
+    print("ACTUALIZACION DE EMISIONES DE AREA - INVENTARIO AMM 2023")
+    print(f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Fuentes: {len(FUENTES)}")
+    total_ops = sum(len(f['operaciones']) for f in FUENTES.values())
+    print(f"Operaciones totales: {total_ops}")
+    print("=" * 70)
+
+    # Cargar localiza.csv
+    ruta_localiza = os.path.join(args.dir_localiza, 'localiza.csv')
+    grid_lon = cargar_localiza(ruta_localiza)
+    print(f"\nlocaliza.csv: {len(grid_lon)} celdas")
+
+    os.makedirs(args.dir_output, exist_ok=True)
+
+    csv_cache = {}
+    total_ops_ok = 0
+    total_ops_skip = 0
+    total_celdas_mty = 0
+    total_celdas_saltillo = 0
+
+    for fuente_name, fuente_info in FUENTES.items():
+        if args.fuente and args.fuente.lower() not in fuente_name.lower():
+            continue
+
+        excel_path = os.path.join(args.dir_excel, fuente_info['excel'])
+        if not os.path.exists(excel_path):
+            print(f"\n  {fuente_info['excel']}: No encontrado - omitiendo")
+            continue
+
+        print(f"\n{'='*70}")
+        print(f"FUENTE: {fuente_name}")
+        print(f"  Excel: {fuente_info['excel']}")
+
+        try:
+            df_excel = pd.read_excel(excel_path, sheet_name=fuente_info['hoja'])
+        except Exception as e:
+            print(f"  Error leyendo Excel: {e}")
+            continue
+
+        col_grid = 'GRIDCODE' if 'GRIDCODE' in df_excel.columns else 'grid'
+        df_excel[col_grid] = df_excel[col_grid].astype(int)
+        print(f"  Celdas Excel: {len(df_excel)}")
+
+        for op in fuente_info['operaciones']:
+            col_excel = op['col']
+            scc = op['scc']
+            csv_name = op['csv']
+
+            if args.csv and args.csv != csv_name:
+                continue
+
+            if col_excel not in df_excel.columns:
+                print(f"    Columna '{col_excel}' no encontrada - omitiendo")
+                total_ops_skip += 1
+                continue
+
+            csv_path = os.path.join(args.dir_output, csv_name)
+            src_path = os.path.join(args.dir_csv, csv_name)
+
+            if not os.path.exists(csv_path):
+                if os.path.exists(src_path):
+                    shutil.copy2(src_path, csv_path)
+                else:
+                    print(f"    {csv_name} no encontrado - omitiendo")
+                    total_ops_skip += 1
+                    continue
+
+            if csv_path not in csv_cache:
+                try:
+                    df_csv, scc_names, scc_count, lines_orig = leer_csv_area(csv_path)
+                    csv_cache[csv_path] = {
+                        'df': df_csv, 'scc_names': scc_names,
+                        'scc_count': scc_count, 'lines_orig': lines_orig
+                    }
+                except Exception as e:
+                    print(f"    Error leyendo {csv_name}: {e}")
+                    total_ops_skip += 1
+                    continue
+
+            cache = csv_cache[csv_path]
+            df_csv = cache['df']
+
+            if scc not in df_csv.columns:
+                df_csv[scc] = 0.0
+
+            csv_grid_idx = dict(zip(df_csv['grid'], df_csv.index))
+
+            celdas_mty = 0
+            celdas_salt = 0
+
+            for _, row_excel in df_excel.iterrows():
+                grid = int(row_excel[col_grid])
+                valor = row_excel[col_excel]
+
+                if pd.isna(valor):
+                    valor = 0.0
+                else:
+                    valor = float(valor) * FACTOR_CONVERSION
+
+                if grid in csv_grid_idx:
+                    idx = csv_grid_idx[grid]
+                    valor_actual = df_csv.at[idx, scc]
+
+                    valor_final, fue_protegida = proteger_saltillo(
+                        grid, valor, valor_actual, grid_lon
+                    )
+                    df_csv.at[idx, scc] = valor_final
+
+                    if fue_protegida:
+                        celdas_salt += 1
+                    else:
+                        celdas_mty += 1
+
+            total_celdas_mty += celdas_mty
+            total_celdas_saltillo += celdas_salt
+            total_ops_ok += 1
+
+            print(f"    {col_excel:25s} -> {scc} -> {csv_name:16s} "
+                  f"({celdas_mty:,} MTY, {celdas_salt:,} Salt.)")
+
+    # Escribir CSVs actualizados
+    print(f"\n{'='*70}")
+    print("ESCRITURA DE CSVs ACTUALIZADOS")
+    print(f"{'='*70}")
+
+    if not args.dry_run:
+        for csv_path, cache in csv_cache.items():
+            csv_name = os.path.basename(csv_path)
+            nuevo_count = escribir_csv_area(csv_path, cache['df'], cache['lines_orig'])
+            delta = nuevo_count - cache['scc_count']
+            status = f"+{delta}" if delta > 0 else "="
+            print(f"  {csv_name:16s}: {cache['scc_count']:2d} -> {nuevo_count:2d} SCCs ({status})")
+    else:
+        print("  [DRY-RUN] No se escribieron archivos")
+
+    # Resumen final
+    print(f"\n{'='*70}")
+    print("RESUMEN FINAL")
+    print(f"{'='*70}")
+    print(f"  Operaciones exitosas:     {total_ops_ok}")
+    print(f"  Operaciones omitidas:     {total_ops_skip}")
+    print(f"  Celdas Monterrey:         {total_celdas_mty:,}")
+    print(f"  Celdas Saltillo prot.:    {total_celdas_saltillo:,}")
+    print(f"  CSVs actualizados:        {len(csv_cache)}")
+    print(f"  Directorio salida:        {args.dir_output}/")
+
+
+if __name__ == '__main__':
     main()
