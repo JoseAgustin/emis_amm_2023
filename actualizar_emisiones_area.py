@@ -34,12 +34,12 @@ FUENTES = {
         "excel": "FM_MaqCons_malla.xlsx",
         "hoja": "FM_MaqCons_malla",
         "operaciones": [
-            {"col": "SUM_PM10_AW", "scc": "2270002000", "csv": "APM10_2023.csv"},
-            {"col": "SUM_PM25_AW", "scc": "2270002000", "csv": "APM25_2023.csv"},
-            {"col": "SUM_SO2_AW", "scc": "2270002000", "csv": "ASO2_2023.csv"},
-            {"col": "SUM_CO_AW",  "scc": "2270002000", "csv": "ACO__2023.csv"},
-            {"col": "SUM_NOx_AW", "scc": "2270002000", "csv": "ANOx_2023.csv"},
-            {"col": "SUM_COV_AW", "scc": "2270002000", "csv": "AVOC_2023.csv"},
+            {"col": "SUM_PM10_AW", "scc": "2311010000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_PM25_AW", "scc": "2311010000", "csv": "APM25_2023.csv"},
+            {"col": "SUM_SO2_AW", "scc": "2311010000", "csv": "ASO2_2023.csv"},
+            {"col": "SUM_CO_AW",  "scc": "2311010000", "csv": "ACO__2023.csv"},
+            {"col": "SUM_NOX_AW", "scc": "2311010000", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_COV_AW", "scc": "2311010000", "csv": "AVOC_2023.csv"},
         ]
     },
     "FA_Agro_UDS_malla3x3": {
@@ -48,10 +48,10 @@ FUENTES = {
         "operaciones": [
             # F1.1 Combustion agricola -> SCC 2270005000
             {"col": "SUM_F1_1_PM10_AW", "scc": "2270005000", "csv": "APM10_2023.csv"},
-            {"col": "SUM_F1_1_PM25_AW", "scc": "2270005000", "csv": "APM25_2023.csv"},
+            {"col": "SUM_F1_1_PM2_5_AW", "scc": "2270005000", "csv": "APM25_2023.csv"},
             {"col": "SUM_F1_1_SO2_AW",  "scc": "2270005000", "csv": "ASO2_2023.csv"},
             {"col": "SUM_F1_1_CO_AW",   "scc": "2270005000", "csv": "ACO__2023.csv"},
-            {"col": "SUM_F1_1_NOx_AW",  "scc": "2270005000", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_F1_1_NOX_AW",  "scc": "2270005000", "csv": "ANOx_2023.csv"},
             {"col": "SUM_F1_1_COV_AW",  "scc": "2270005000", "csv": "AVOC_2023.csv"},
             {"col": "SUM_F1_1_NH3_AW",  "scc": "2270005000", "csv": "ANH3_2023.csv"},
             # F3.1 Distribucion GLP -> SCC 3333333333
@@ -74,7 +74,7 @@ FUENTES = {
             {"col": "SUM_F5_6_PM25_AW", "scc": "2801500100", "csv": "APM25_2023.csv"},
             {"col": "SUM_F5_6_SO2_AW",  "scc": "2801500100", "csv": "ASO2_2023.csv"},
             {"col": "SUM_F5_6_CO_AW",   "scc": "2801500100", "csv": "ACO__2023.csv"},
-            {"col": "SUM_F5_6_NOx_AW",  "scc": "2801500100", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_F5_6_NOX_AW",  "scc": "2801500100", "csv": "ANOx_2023.csv"},
             {"col": "SUM_F5_6_COV_AW",  "scc": "2801500100", "csv": "AVOC_2023.csv"},
             {"col": "SUM_F5_6_NH3_AW",  "scc": "2801500100", "csv": "ANH3_2023.csv"},
         ]
@@ -83,67 +83,69 @@ FUENTES = {
         "excel": "FA_evaporativas_9cat_malla.xlsx",
         "hoja": "FA_evaporativas_9cat_malla",
         "operaciones": [
-            {"col": "SUM_Tintas_AW",       "scc": "2461021000", "csv": "AVOC_2023.csv"},
-            {"col": "SUM_Pegamentos_AW",    "scc": "2461022000", "csv": "AVOC_2023.csv"},
-            {"col": "SUM_Limpieza_AW",      "scc": "2461800000", "csv": "AVOC_2023.csv"},
-            {"col": "SUM_PintArq_AW",       "scc": "2460100000", "csv": "AVOC_2023.csv"},
-            {"col": "SUM_PintInd_AW",       "scc": "2460400000", "csv": "AVOC_2023.csv"},
-            {"col": "SUM_Recubrim_AW",      "scc": "2460600000", "csv": "AVOC_2023.csv"},
-            {"col": "SUM_PintAuto_AW",      "scc": "2460800000", "csv": "AVOC_2023.csv"},
-            {"col": "SUM_ArtLimp_AW",       "scc": "2461023000", "csv": "AVOC_2023.csv"},
-            {"col": "SUM_Lavanderia_AW",    "scc": "2415300000", "csv": "AVOC_2023.csv"},
+            {"col": "F21ArtGraf",       "scc": "2425000000", "csv": "AVOC_2023.csv"},
+            {"col": "F23LavSeco",       "scc": "2420000055", "csv": "AVOC_2023.csv"},
+            {"col": "F24LimSupInd",     "scc": "2415000000", "csv": "AVOC_2023.csv"},
+            {"col": "F25PintAuto",      "scc": "2401005000", "csv": "AVOC_2023.csv"},
+            {"col": "F28RecSupInd",     "scc": "2401002000", "csv": "AVOC_2023.csv"},
+            {"col": "F31GLPCom",        "scc": "3333333333", "csv": "AVOC_2023.csv"},
+            {"col": "F31GLPCom",        "scc": "2390007000", "csv": "AVOC_2023.csv"},
+            {"col": "F32ManDisGasolina","scc": "2501060000", "csv": "AVOC_2023.csv"},
+            {"col": "F43Panifica",      "scc": "2302050000", "csv": "AVOC_2023.csv"},
         ]
     },
     "FA_AguasRes_malla": {
-        "excel": "FA_AguasRes_malla.xlsx",
-        "hoja": "FA_AguasRes_malla",
+        "excel": "FA_AguasRes_RelleSant_malla.xlsx",
+        "hoja": "FA_AguasRes_RelleSant_malla",
         "operaciones": [
-            {"col": "SUM_COV_AW", "scc": "2810001000", "csv": "AVOC_2023.csv"},
-            {"col": "SUM_NH3_AW", "scc": "2810001000", "csv": "ANH3_2023.csv"},
+            {"col": "COV", "scc": "2630030000", "csv": "AVOC_2023.csv"},
+            {"col": "CH4", "scc": "2630030000", "csv": "ACH4_2023.csv"},
         ]
     },
     "FA_erosivas_malla": {
-        "excel": "FA_erosivas_malla.xlsx",
-        "hoja": "FA_erosivas_malla",
+        "excel": "FA_Erosivas_PM_UDS_malla.xlsx",
+        "hoja": "FA_Erosivas_PM_UDS_malla",
         "operaciones": [
-            {"col": "SUM_PM10_AW", "scc": "2810060000", "csv": "APM10_2023.csv"},
-            {"col": "SUM_PM25_AW", "scc": "2810060000", "csv": "APM25_2023.csv"},
+            {"col": "SUM_PM10_AW", "scc": "2730100000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_PM25_AW", "scc": "2730100000", "csv": "APM25_2023.csv"},
         ]
     },
     "FM_Aero_CAutobus_malla": {
         "excel": "FM_Aero_CAutobus_malla.xlsx",
         "hoja": "FM_Aero_CAutobus_malla",
         "operaciones": [
-            {"col": "SUM_PM10_AW", "scc": "2275020000", "csv": "APM10_2023.csv"},
-            {"col": "SUM_PM25_AW", "scc": "2275020000", "csv": "APM25_2023.csv"},
-            {"col": "SUM_SO2_AW",  "scc": "2275020000", "csv": "ASO2_2023.csv"},
-            {"col": "SUM_CO_AW",   "scc": "2275020000", "csv": "ACO__2023.csv"},
-            {"col": "SUM_NOx_AW",  "scc": "2275020000", "csv": "ANOx_2023.csv"},
-            {"col": "SUM_COV_AW",  "scc": "2275020000", "csv": "AVOC_2023.csv"},
+            {"col": "SUM_PM10", "scc": "2270008000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_PM25", "scc": "2270008000", "csv": "APM25_2023.csv"},
+            {"col": "SUM_SO2",  "scc": "2270008000", "csv": "ASO2_2023.csv"},
+            {"col": "SUM_CO",   "scc": "2270008000", "csv": "ACO__2023.csv"},
+            {"col": "SUM_NOX",  "scc": "2270008000", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_COV",  "scc": "2270008000", "csv": "AVOC_2023.csv"},
         ]
     },
     "FM_ferrocarril_emis_malla": {
         "excel": "FM_ferrocarril_emis_malla.xlsx",
         "hoja": "FM_ferrocarril_emis_malla",
         "operaciones": [
-            {"col": "SUM_PM10_AW", "scc": "2270006000", "csv": "APM10_2023.csv"},
-            {"col": "SUM_PM25_AW", "scc": "2270006000", "csv": "APM25_2023.csv"},
-            {"col": "SUM_SO2_AW",  "scc": "2270006000", "csv": "ASO2_2023.csv"},
-            {"col": "SUM_CO_AW",   "scc": "2270006000", "csv": "ACO__2023.csv"},
-            {"col": "SUM_NOx_AW",  "scc": "2270006000", "csv": "ANOx_2023.csv"},
-            {"col": "SUM_COV_AW",  "scc": "2270006000", "csv": "AVOC_2023.csv"},
+            {"col": "SUM_PM10_LW", "scc": "2285000000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_PM25_LW", "scc": "2285000000", "csv": "APM25_2023.csv"},
+            {"col": "SUM_SO2_LW",  "scc": "2285000000", "csv": "ASO2_2023.csv"},
+            {"col": "SUM_CO_LW",   "scc": "2285000000", "csv": "ACO__2023.csv"},
+            {"col": "SUM_NOX_LW",  "scc": "2285000000", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_COV_LW",  "scc": "2285000000", "csv": "AVOC_2023.csv"},
         ]
     },
     "FM_maquinaria_agricola_malla": {
         "excel": "FM_maquinaria_agricola_malla.xlsx",
         "hoja": "FM_maquinaria_agricola_malla",
         "operaciones": [
-            {"col": "SUM_PM10_AW", "scc": "2270005000", "csv": "APM10_2023.csv"},
-            {"col": "SUM_PM25_AW", "scc": "2270005000", "csv": "APM25_2023.csv"},
-            {"col": "SUM_SO2_AW",  "scc": "2270005000", "csv": "ASO2_2023.csv"},
-            {"col": "SUM_CO_AW",   "scc": "2270005000", "csv": "ACO__2023.csv"},
-            {"col": "SUM_NOx_AW",  "scc": "2270005000", "csv": "ANOx_2023.csv"},
-            {"col": "SUM_COV_AW",  "scc": "2270005000", "csv": "AVOC_2023.csv"},
+            {"col": "SUM_PM10", "scc": "2265005000", "csv": "APM10_2023.csv"},
+            {"col": "SUM_PM2_5","scc": "2265005000", "csv": "APM25_2023.csv"},
+            {"col": "SUM_SO2",  "scc": "2265005000", "csv": "ASO2_2023.csv"},
+            {"col": "SUM_CO",   "scc": "2265005000", "csv": "ACO__2023.csv"},
+            {"col": "SUM_NOX",  "scc": "2265005000", "csv": "ANOx_2023.csv"},
+            {"col": "SUM_COV",  "scc": "2265005000", "csv": "AVOC_2023.csv"},
+            {"col": "SUM_NH3",  "scc": "2265005000", "csv": "ANH3_2023.csv"},
+            {"col": "SUM_CN",   "scc": "2265005000", "csv": "ACN__2023.csv"},
         ]
     },
     "FA_comb_comer_regulada_malla": {
@@ -151,21 +153,16 @@ FUENTES = {
         "hoja": "FA_comb_comer_regulada_malla",
         "operaciones": [
             # Combustion -> SCC 2103007000
-            {"col": "SUM_PM10_AW",    "scc": "2103007000", "csv": "APM10_2023.csv"},
-            {"col": "SUM_PM25_AW",    "scc": "2103007000", "csv": "APM25_2023.csv"},
-            {"col": "SUM_SO2_AW",     "scc": "2103007000", "csv": "ASO2_2023.csv"},
-            {"col": "SUM_CO_AW",      "scc": "2103007000", "csv": "ACO__2023.csv"},
-            {"col": "SUM_NOx_AW",     "scc": "2103007000", "csv": "ANOx_2023.csv"},
-            {"col": "SUM_COV_AW",     "scc": "2103007000", "csv": "AVOC_2023.csv"},
-            {"col": "SO2Comb",        "scc": "2103007000", "csv": "ASO2_2023.csv"},
+            {"col": "PM10",        "scc": "2103007000", "csv": "APM10_2023.csv"},
+            {"col": "PM2_5",       "scc": "2103007000", "csv": "APM25_2023.csv"},
+            {"col": "SO2",         "scc": "2103007000", "csv": "ASO2_2023.csv"},
+            {"col": "CO",          "scc": "2103007000", "csv": "ACO__2023.csv"},
+            {"col": "NOx",         "scc": "2103007000", "csv": "ANOx_2023.csv"},
+            {"col": "COTComb",     "scc": "2103007000", "csv": "AVOC_2023.csv"},
+            {"col": "NH3",         "scc": "2103007000", "csv": "ANH3_2023.csv"},
+            {"col": "CN",          "scc": "2103007000", "csv": "ACN__2023.csv"},
             # Evaporacion -> SCC 2104011000
-            {"col": "SUM_PM10ev_AW",  "scc": "2104011000", "csv": "APM10_2023.csv"},
-            {"col": "SUM_PM25ev_AW",  "scc": "2104011000", "csv": "APM25_2023.csv"},
-            {"col": "SUM_SO2ev_AW",   "scc": "2104011000", "csv": "ASO2_2023.csv"},
-            {"col": "SUM_COev_AW",    "scc": "2104011000", "csv": "ACO__2023.csv"},
-            {"col": "SUM_NOxev_AW",   "scc": "2104011000", "csv": "ANOx_2023.csv"},
-            {"col": "SUM_COVev_AW",   "scc": "2104011000", "csv": "AVOC_2023.csv"},
-            {"col": "SUM_NH3ev_AW",   "scc": "2104011000", "csv": "ANH3_2023.csv"},
+            {"col": "COVProc",   "scc": "2103004000", "csv": "AVOC_2023.csv"},
         ]
     },
 }
@@ -240,13 +237,13 @@ def main():
     parser = argparse.ArgumentParser(
         description='Actualizar emisiones de area del inventario AMM 2023'
     )
-    parser.add_argument('--dir-excel', default='datos',
+    parser.add_argument('--dir-excel', default='datos/excel/',
                         help='Directorio con archivos Excel (default: datos)')
-    parser.add_argument('--dir-csv', default='csv_originales',
+    parser.add_argument('--dir-csv', default='datos/csv/',
                         help='Directorio con CSVs originales (default: csv_originales)')
     parser.add_argument('--dir-output', default='csv_actualizados',
                         help='Directorio de salida (default: csv_actualizados)')
-    parser.add_argument('--dir-localiza', default='datos',
+    parser.add_argument('--dir-localiza', default='datos/csv/',
                         help='Directorio con localiza.csv (default: datos)')
     parser.add_argument('--fuente', default=None,
                         help='Procesar solo esta fuente (default: todas)')

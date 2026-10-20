@@ -217,10 +217,10 @@ def main():
     parser = argparse.ArgumentParser(
         description='Actualizar emisiones vehiculares (carreteras) del inventario AMM 2023'
     )
-    parser.add_argument('--dir-excel', default='datos')
-    parser.add_argument('--dir-csv', default='csv_originales')
+    parser.add_argument('--dir-excel', default='datos/excel/')
+    parser.add_argument('--dir-csv', default='datos/csv/')
     parser.add_argument('--dir-output', default='csv_actualizados')
-    parser.add_argument('--dir-localiza', default='datos')
+    parser.add_argument('--dir-localiza', default='datos/csv')
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
 
